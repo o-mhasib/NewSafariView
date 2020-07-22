@@ -1,7 +1,7 @@
 package com.customtabplugin;
 
+
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -23,7 +23,6 @@ import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.chromium.customtabsclient.shared.CustomTabsHelper;
 
 public class ChromeCustomTabPlugin extends CordovaPlugin{
 
@@ -43,7 +42,6 @@ public class ChromeCustomTabPlugin extends CordovaPlugin{
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        final Context context = this.cordova.getContext();
 
         switch (action) {
             case "isAvailable":
@@ -88,33 +86,6 @@ public class ChromeCustomTabPlugin extends CordovaPlugin{
                 callbackContext.sendPluginResult(pluginResult);
                 return true;
             }
-            case "getViewHandlerPackages": {
-                PluginResult pluginResult;
-                final JSONObject result = new JSONObject();
-                result.put("defaultHandler", CustomTabsHelper.getDefaultViewHandlerPackageName(context));
-                result.put("customTabsImplementations", new JSONArray(CustomTabsHelper.getPackagesSupportingCustomTabs(context)));
-                pluginResult = new PluginResult(PluginResult.Status.OK, result);
-                callbackContext.sendPluginResult(pluginResult);
-                return true;
-            }
-            case "useCustomTabsImplementation": {
-                PluginResult pluginResult;
-                JSONObject result = new JSONObject();
-                final String packageName = args.optString(0);
-                if(TextUtils.isEmpty(packageName)) {
-                    result.put("error", "expected argument 'packageName' to be non empty string.");
-                    pluginResult = new PluginResult(PluginResult.Status.ERROR, result);
-                } else {
-                    try {
-                        mCustomTabPluginHelper.setPackageNameToBind(packageName, context);
-                        pluginResult = new PluginResult(PluginResult.Status.OK, true);
-                    } catch (CustomTabsHelper.InvalidPackageException e) {
-                        pluginResult = new PluginResult(PluginResult.Status.ERROR, "Invalid package: "+packageName);
-                    }
-                }
-                callbackContext.sendPluginResult(pluginResult);
-                return true;
-            }
             case "connectToService": {
                 if (bindCustomTabsService())
                     callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
@@ -155,13 +126,7 @@ public class ChromeCustomTabPlugin extends CordovaPlugin{
         if(!TextUtils.isEmpty(transition))
             addTransition(builder, transition);
 
-
         CustomTabsIntent customTabsIntent = builder.build();
-
-        String packageName = CustomTabsHelper.getPackageNameToUse(cordova.getActivity());
-        if ( packageName != null ) {
-           customTabsIntent.intent.setPackage(packageName);
-        }
 
         startCustomTabActivity(url, customTabsIntent.intent);
     }
@@ -179,6 +144,7 @@ public class ChromeCustomTabPlugin extends CordovaPlugin{
 
     private void startCustomTabActivity(String url, Intent intent) {
         intent.setData(Uri.parse(url));
+        intent.setPackage("com.android.chrome");
         if(mStartAnimationBundle == null)
             cordova.startActivityForResult(this, intent, CUSTOM_TAB_REQUEST_CODE);
         else {
